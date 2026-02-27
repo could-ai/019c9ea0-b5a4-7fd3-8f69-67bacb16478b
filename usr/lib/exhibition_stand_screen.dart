@@ -11,6 +11,7 @@ class ExhibitionStandScreen extends StatefulWidget {
 class _ExhibitionStandScreenState extends State<ExhibitionStandScreen> {
   bool _showLighting = true;
   bool _showDimensions = false;
+  bool _is3D = false;
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +27,11 @@ class _ExhibitionStandScreenState extends State<ExhibitionStandScreen> {
             icon: Icon(_showLighting ? Icons.lightbulb : Icons.lightbulb_outline),
             onPressed: () => setState(() => _showLighting = !_showLighting),
             tooltip: 'Toggle Lighting',
+          ),
+          IconButton(
+            icon: Icon(_is3D ? Icons.view_quilt : Icons.view_in_ar),
+            onPressed: () => setState(() => _is3D = !_is3D),
+            tooltip: 'Toggle 3D View',
           ),
         ],
       ),
@@ -62,6 +68,12 @@ class _ExhibitionStandScreenState extends State<ExhibitionStandScreen> {
                     activeColor: Colors.black,
                     onChanged: (val) => setState(() => _showDimensions = val),
                   ),
+                  SwitchListTile(
+                    title: const Text('3D Perspective'),
+                    value: _is3D,
+                    activeColor: Colors.black,
+                    onChanged: (val) => setState(() => _is3D = val),
+                  ),
                 ],
               ),
             ),
@@ -76,29 +88,44 @@ class _ExhibitionStandScreenState extends State<ExhibitionStandScreen> {
                   builder: (context, constraints) {
                     // Calculate a square size that fits
                     double size = constraints.maxWidth < constraints.maxHeight
-                        ? constraints.maxWidth * 0.9
-                        : constraints.maxHeight * 0.9;
+                        ? constraints.maxWidth * 0.8
+                        : constraints.maxHeight * 0.8;
                     
-                    return Container(
-                      width: size,
-                      height: size,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            spreadRadius: 5,
+                    return TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: _is3D ? 1 : 0),
+                      duration: const Duration(milliseconds: 800),
+                      curve: Curves.easeInOutCubic,
+                      builder: (context, value, child) {
+                        return Transform(
+                          transform: Matrix4.identity()
+                            ..setEntry(3, 2, 0.001) // Perspective
+                            ..rotateX(0.9 * value) // Tilt back
+                            ..rotateZ(0.2 * value), // Slight rotation
+                          alignment: Alignment.center,
+                          child: Container(
+                            width: size,
+                            height: size,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 30,
+                                  spreadRadius: 5,
+                                  offset: Offset(0, 10 * value),
+                                ),
+                              ],
+                            ),
+                            child: CustomPaint(
+                              painter: StandLayoutPainter(
+                                showLighting: _showLighting,
+                                showDimensions: _showDimensions,
+                              ),
+                              size: Size(size, size),
+                            ),
                           ),
-                        ],
-                      ),
-                      child: CustomPaint(
-                        painter: StandLayoutPainter(
-                          showLighting: _showLighting,
-                          showDimensions: _showDimensions,
-                        ),
-                        size: Size(size, size),
-                      ),
+                        );
+                      },
                     );
                   },
                 ),
